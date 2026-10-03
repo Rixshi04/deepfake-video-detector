@@ -62,10 +62,10 @@ def analyze_video(video_path: str | None) -> tuple[str, str]:
             f"- **Fake probability:** **{fake_score:.1%}**\n"
             f"- **Real probability:** **{real_score:.1%}**\n"
             f"- **Temporal frames:** {NUM_FRAMES}\n"
-            f"- **Video frames:** {int(metadata["total_frames"]):,}\n"
-            f"- **Resolution:** {int(metadata["width"])} × {int(metadata["height"])}\n"
-            f"- **FPS:** {metadata["fps"]:.2f}\n"
-            f"- **Duration:** {metadata["duration"]:.2f} seconds"
+            f"- **Video frames:** {int(metadata['total_frames']):,}\n"
+            f"- **Resolution:** {int(metadata['width'])} × {int(metadata['height'])}\n"
+            f"- **FPS:** {metadata['fps']:.2f}\n"
+            f"- **Duration:** {metadata['duration']:.2f} seconds"
         )
         note = (
             "Model: SoraExplora/VideoMae. The classifier receives the complete ordered "
