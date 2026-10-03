@@ -1,42 +1,51 @@
-# Deepfake Video Detector
+# Temporal Deepfake Video Detector
 
-A Gradio + OpenCV application that uses a pretrained Vision Transformer (ViT) deepfake classifier to estimate whether an uploaded video contains manipulated frames.
+A Gradio + OpenCV application that uses a fine-tuned VideoMAE transformer to classify an ordered sequence of video frames as real or deepfake.
 
-> **Important:** This is an ML-based screening tool, not a forensic authenticity guarantee. The model is a frame-level classifier trained on the OpenForensics dataset, so performance can change on different datasets, compression levels, identities, or manipulation methods.
+> **Important:** This is an ML-based screening tool, not a forensic authenticity guarantee. Model performance can change on videos, compression levels, identities, or manipulation methods outside its training distribution.
+
+## What changed
+
+The detector no longer averages independent frame predictions. It now passes a **16-frame ordered sequence into a temporal VideoMAE model in one inference call**. VideoMAE is designed for spatiotemporal video representations, so the classifier can use relationships across frames rather than treating every frame as an unrelated image. citeturn1search1
 
 ## Features
 
-- Upload a video through a Gradio interface
-- Sample up to 24 frames from the video
-- Run a pretrained ViT deepfake classifier on each sampled frame
-- Aggregate frame-level fake probabilities into a video-level score
-- Display REAL/DEEPFAKE screening verdict and probability
-- Report basic video metadata
+- Upload a video through Gradio
+- Uniformly sample 16 ordered frames across the video
+- Run temporal VideoMAE inference over the complete sequence
+- Produce real/fake probabilities directly from the video classifier
+- Display a video-level screening verdict
+- Report video metadata
 
-## Model
+## Temporal model
 
-The application uses `hamzenium/ViT-Deepfake-Classifier` from Hugging Face.
+The application uses `SoraExplora/VideoMae`, a community-published VideoMAE model fine-tuned for binary deepfake video classification. Its model card says it was fine-tuned on a subset of FaceForensics++ using 16 uniformly sampled frames at 224×224 resolution, with real and deepfake classes. The card reports validation accuracy of 88.0%, F1 of 0.742, and AUC of 0.836 on its own held-out validation split. citeturn1view0
 
-- Architecture: Vision Transformer based on `google/vit-base-patch16-224-in21k`
-- Task: binary real/fake image classification
-- Training data documented by the model card: OpenForensics
-- Reported accuracy in the model card: 96.56%
-- License reported by the model card: Apache 2.0
+Model documentation: urlSoraExplora/VideoMae on Hugging Facehttps://huggingface.co/SoraExplora/VideoMae
 
-The model is downloaded automatically by Transformers on first use and cached locally. The model weights are intentionally not committed to this repository because the checkpoint is large; the repository records the exact model identifier instead.
+The model weights are downloaded and cached automatically by Transformers on first use. They are not committed to this repository.
 
-Model documentation: https://huggingface.co/hamzenium/ViT-Deepfake-Classifier
+## How inference works
 
-## How the video score is calculated
+```text
+Video
+  ↓
+Uniform temporal sampling
+  ↓
+16 ordered frames
+  ↓
+VideoMAE processor
+  ↓
+Temporal VideoMAE transformer
+  ↓
+Real / Fake logits
+  ↓
+Softmax probabilities
+  ↓
+Video-level verdict
+```
 
-1. OpenCV reads the uploaded video.
-2. Up to 24 frames are sampled uniformly across the video.
-3. Each frame is converted to RGB and passed to the pretrained classifier.
-4. The model returns a probability for the fake class.
-5. The application calculates the arithmetic mean of the sampled fake probabilities.
-6. A score of 50% or higher is displayed as `LIKELY DEEPFAKE`; otherwise it is displayed as `LIKELY REAL`.
-
-The displayed percentage is therefore a **model probability aggregated across sampled frames**, not a calibrated probability that the entire video is definitively fake.
+Unlike the previous frame-averaging implementation, there is no arithmetic average of 16 independent frame probabilities. The model receives the sequence as one video input and its classification head produces the video-level logits.
 
 ## Project structure
 
@@ -73,39 +82,37 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-PyTorch installation can be hardware-specific. If the standard `pip install` does not provide the appropriate build for your machine, install the matching PyTorch build first and then install the remaining requirements.
+PyTorch installation can be hardware-specific. For NVIDIA GPUs, use the PyTorch build appropriate for your CUDA environment if the default package is not suitable.
 
-### 3. Run the application
+### 3. Run
 
 ```bash
 python app.py
 ```
 
-Open the local Gradio URL printed in the terminal and upload a video.
+Open the local Gradio URL and upload a video.
 
-## Output example
+## Output
 
 ```text
 Verdict: LIKELY DEEPFAKE
 Fake probability: 87.4%
 Real probability: 12.6%
-Frames analyzed: 24
+Temporal frames: 16
 ```
+
+The displayed probability is the model's softmax output for the video clip. It is not a calibrated probability that the entire source video is definitively manipulated.
 
 ## Limitations
 
-- The underlying model is a frame-level image classifier; it does not model temporal consistency between frames.
-- The model was trained on a particular dataset and may not generalize to every type of deepfake.
-- Video compression, lighting, face size, cropping, and unseen manipulation techniques can affect predictions.
-- The score is not independently calibrated by this repository.
-- A prediction should not be treated as definitive evidence of authenticity or manipulation.
-- The application currently analyzes full frames rather than performing dedicated face detection/cropping.
+- The model was trained on a subset of FaceForensics++ and may not generalize to unseen manipulation techniques. citeturn1view0
+- It samples 16 frames rather than processing every frame.
+- Uniform sampling can miss very short-lived manipulations.
+- Compression, occlusion, cropping, lighting, and video quality can affect predictions.
+- The repository has not independently evaluated the complete application on a held-out dataset.
+- The model's reported 88.0% validation accuracy is **not** an accuracy claim for this application. citeturn1view0
 
-For stronger research use, add a face-detection stage, temporal modeling, a held-out video-level evaluation set, threshold calibration, and reproducible metrics.
-
-## Evaluation
-
-Do not copy the model card's reported accuracy into a claim about this application's accuracy. To make a repository-specific performance claim, evaluate the complete pipeline on a held-out video dataset and report accuracy, precision, recall, F1, ROC-AUC, and a confusion matrix.
+For a stronger production/research system, add face-centered preprocessing, multiple temporal clips per video, threshold calibration, and an independent video-level evaluation set.
 
 ## License
 
