@@ -1,41 +1,41 @@
-"""Pretrained frame-level deepfake classifier.
-
-The checkpoint is downloaded from Hugging Face on first use and cached locally
-by Transformers. Video-level predictions are produced by aggregating sampled
-frame probabilities.
-"""
+"""Temporal VideoMAE deepfake classifier."""
 
 from __future__ import annotations
 
 from functools import lru_cache
 
+import numpy as np
 import torch
 from PIL import Image
-from transformers import AutoImageProcessor, AutoModelForImageClassification
+from transformers import VideoMAEForVideoClassification, VideoMAEImageProcessor
 
-MODEL_ID = "hamzenium/ViT-Deepfake-Classifier"
-FAKE_LABELS = {"fake", "deepfake", "1"}
+MODEL_ID = "SoraExplora/VideoMae"
+NUM_FRAMES = 16
 
 @lru_cache(maxsize=1)
 def load_model():
-    """Load and cache the pretrained processor and model."""
-    processor = AutoImageProcessor.from_pretrained(MODEL_ID)
-    model = AutoModelForImageClassification.from_pretrained(MODEL_ID)
+    """Load the fine-tuned temporal video classifier and processor once."""
+    processor = VideoMAEImageProcessor.from_pretrained(MODEL_ID)
+    model = VideoMAEForVideoClassification.from_pretrained(MODEL_ID)
     model.eval()
     return processor, model
 
-def fake_probability(image: Image.Image) -> float:
-    """Return the model probability that a frame is fake."""
+def predict_clip(frames: list[Image.Image]) -> tuple[float, float]:
+    """Classify one ordered 16-frame clip as real/fake."""
+    if len(frames) != NUM_FRAMES:
+        raise ValueError(f"Expected {NUM_FRAMES} frames, received {len(frames)}.")
+
     processor, model = load_model()
-    inputs = processor(images=image.convert("RGB"), return_tensors="pt")
+    inputs = processor(frames, return_tensors="pt")
     with torch.inference_mode():
-        probabilities = torch.softmax(model(**inputs).logits, dim=-1)[0]
-    fake_index = None
-    for index, label in model.config.id2label.items():
-        normalized = str(label).strip().lower()
-        if normalized in FAKE_LABELS or "fake" in normalized:
-            fake_index = int(index)
-            break
-    if fake_index is None:
-        fake_index = 1
-    return float(probabilities[fake_index].item())
+        logits = model(**inputs).logits
+        probabilities = torch.softmax(logits, dim=-1)[0]
+
+    # The model card defines class 0 as real and class 1 as fake.
+    return float(probabilities[0]), float(probabilities[1])
+
+def sample_frame_indices(total_frames: int, num_frames: int = NUM_FRAMES) -> np.ndarray:
+    """Select an ordered temporal sequence spanning the video."""
+    if total_frames <= 0:
+        raise ValueError("Video contains no readable frames.")
+    return np.linspace(0, total_frames - 1, num_frames).astype(int)
