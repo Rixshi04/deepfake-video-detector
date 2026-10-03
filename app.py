@@ -6,7 +6,6 @@ classify videos as real or fake without a trained model.
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import cv2
