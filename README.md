@@ -174,3 +174,50 @@ This writes `calibration.json` and reports the validation negative log-likelihoo
 - **Clip score variation:** the range between the highest and lowest temperature-scaled clip probabilities.
 
 A calibrated probability means that, on data drawn from the calibration distribution, predictions in a probability bin should approximately match the observed frequency of that outcome. It does **not** mean forensic certainty, and calibration can degrade when the target videos differ substantially from the calibration dataset.
+
+
+### One-command calibration from labeled videos
+
+You can now build both calibration artifacts directly from a labeled validation set.
+
+Use this structure:
+
+```text
+validation_videos/
+├── real/
+│   ├── real_001.mp4
+│   ├── real_002.mp4
+│   └── ...
+└── fake/
+    ├── fake_001.mp4
+    ├── fake_002.mp4
+    └── ...
+```
+
+Then run:
+
+```bash
+python build_calibration.py validation_videos
+```
+
+The script:
+
+1. Loads the same VideoMAE model as the application.
+2. Splits every video into the same maximum of 5 evenly distributed temporal clips.
+3. Samples 16 ordered frames per clip.
+4. Runs the same temporal classifier on every clip.
+5. Converts each clip's real/fake probabilities into a fake-vs-real logit.
+6. Averages those clip logits to obtain one raw video logit.
+7. Writes `validation_predictions.csv`.
+8. Fits temperature scaling on those labeled video logits.
+9. Writes `calibration.json`.
+
+Optional output paths:
+
+```bash
+python build_calibration.py validation_videos --predictions validation_predictions.csv --calibration calibration.json
+```
+
+The script requires at least **20 labeled videos** and both classes. For a meaningful calibration estimate, use a substantially larger, representative validation set when possible and keep it separate from model training data.
+
+The generated `calibration.json` is gitignored because it is specific to the validation distribution and model version.
