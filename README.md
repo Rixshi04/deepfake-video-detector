@@ -1,47 +1,87 @@
 # Deepfake Video Analysis Demo
 
-A small OpenCV + Gradio prototype for experimenting with video-frame processing and result visualization.
+A small **OpenCV + Gradio** prototype for inspecting uploaded videos and sampling frames.
 
-> **Important:** this repository currently contains a **mock detector**, not a trained deepfake-classification model. It marks demonstration frames as fake so the UI and video-processing pipeline can be tested safely.
+> **Important:** this repository does **not** currently contain a trained deepfake-classification model. The application deliberately reports video properties and frame statistics instead of pretending that a heuristic is a reliable real/fake detector.
 
 ## Features
-- Upload a video for frame-by-frame processing
-- OpenCV-based video decoding
-- Gradio web interface
-- Detection percentage visualization
-- Clear separation between demo logic and a future trained model
+
+- Upload a video through a Gradio web interface
+- Decode videos with OpenCV
+- Read resolution, FPS, frame count, and duration
+- Sample video frames
+- Calculate average sampled-frame brightness
+- Clearly distinguish demo analysis from trained deepfake inference
+
+## Project structure
+
+```text
+deepfake-video-detector/
+├── app.py
+├── requirements.txt
+├── README.md
+└── .gitignore
+```
 
 ## Setup
 
+### 1. Create a virtual environment
+
+**Windows**
+
 ```bash
 python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
-
-pip install opencv-python gradio numpy
+.venv\\Scripts\\activate
 ```
 
-## How the prototype works
-1. Open the uploaded video with OpenCV.
-2. Iterate through frames.
-3. Apply the current demonstration detection rule.
-4. Aggregate frame-level results.
-5. Display the result through the web UI.
+**macOS/Linux**
 
-## Limitations
-The current logic does **not** learn visual artifacts associated with deepfakes and should not be used as a real authenticity detector.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-For a production-quality version, replace the mock rule with a trained model and report precision, recall, F1-score, ROC-AUC, and a confusion matrix on a held-out dataset.
+### 2. Install dependencies
 
-## Suggested next steps
-- Add a trained CNN/ViT-based frame classifier.
-- Add face detection/cropping before inference.
-- Sample frames adaptively instead of processing every frame.
-- Batch model inference for better throughput.
-- Add automated tests for video loading and inference.
-- Add reproducible dependency and model-download instructions.
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Run the application
+
+From the repository root:
+
+```bash
+python app.py
+```
+
+Gradio will print a local URL in the terminal. Open it in your browser and upload a video.
+
+## How it works
+
+1. Gradio receives the uploaded video.
+2. OpenCV opens the video file.
+3. Basic metadata such as FPS, resolution, frame count, and duration is read.
+4. A limited number of frames are sampled.
+5. Average grayscale brightness is calculated for the sampled frames.
+6. The UI reports the analysis and explicitly states that no deepfake prediction is being made.
+
+## Current limitation
+
+This is a **video-analysis/UI prototype**, not a production deepfake detector.
+
+A genuine detector would require a trained model and an evaluation pipeline, for example:
+
+- Face detection and face alignment
+- Frame sampling and preprocessing
+- CNN or Vision Transformer inference
+- Temporal modeling where appropriate
+- A labeled train/validation/test dataset
+- Precision, recall, F1-score, ROC-AUC, and confusion matrix
+- Model/version and dataset documentation
+
+Do not use the current demo's output as evidence that a video is authentic or manipulated.
 
 ## License
-MIT.
+
+MIT
