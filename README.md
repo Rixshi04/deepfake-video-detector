@@ -1,23 +1,49 @@
-# Deepfake Video Analysis Demo
+# Deepfake Video Detector
 
-A small **OpenCV + Gradio** prototype for inspecting uploaded videos and sampling frames.
+A Gradio + OpenCV application that uses a pretrained Vision Transformer (ViT) deepfake classifier to estimate whether an uploaded video contains manipulated frames.
 
-> **Important:** this repository does **not** currently contain a trained deepfake-classification model. The application deliberately reports video properties and frame statistics instead of pretending that a heuristic is a reliable real/fake detector.
+> **Important:** This is an ML-based screening tool, not a forensic authenticity guarantee. The model is a frame-level classifier trained on the OpenForensics dataset, so performance can change on different datasets, compression levels, identities, or manipulation methods.
 
 ## Features
 
-- Upload a video through a Gradio web interface
-- Decode videos with OpenCV
-- Read resolution, FPS, frame count, and duration
-- Sample video frames
-- Calculate average sampled-frame brightness
-- Clearly distinguish demo analysis from trained deepfake inference
+- Upload a video through a Gradio interface
+- Sample up to 24 frames from the video
+- Run a pretrained ViT deepfake classifier on each sampled frame
+- Aggregate frame-level fake probabilities into a video-level score
+- Display REAL/DEEPFAKE screening verdict and probability
+- Report basic video metadata
+
+## Model
+
+The application uses `hamzenium/ViT-Deepfake-Classifier` from Hugging Face.
+
+- Architecture: Vision Transformer based on `google/vit-base-patch16-224-in21k`
+- Task: binary real/fake image classification
+- Training data documented by the model card: OpenForensics
+- Reported accuracy in the model card: 96.56%
+- License reported by the model card: Apache 2.0
+
+The model is downloaded automatically by Transformers on first use and cached locally. The model weights are intentionally not committed to this repository because the checkpoint is large; the repository records the exact model identifier instead.
+
+Model documentation: https://huggingface.co/hamzenium/ViT-Deepfake-Classifier
+
+## How the video score is calculated
+
+1. OpenCV reads the uploaded video.
+2. Up to 24 frames are sampled uniformly across the video.
+3. Each frame is converted to RGB and passed to the pretrained classifier.
+4. The model returns a probability for the fake class.
+5. The application calculates the arithmetic mean of the sampled fake probabilities.
+6. A score of 50% or higher is displayed as `LIKELY DEEPFAKE`; otherwise it is displayed as `LIKELY REAL`.
+
+The displayed percentage is therefore a **model probability aggregated across sampled frames**, not a calibrated probability that the entire video is definitively fake.
 
 ## Project structure
 
 ```text
 deepfake-video-detector/
 ├── app.py
+├── model.py
 ├── requirements.txt
 ├── README.md
 └── .gitignore
@@ -27,14 +53,14 @@ deepfake-video-detector/
 
 ### 1. Create a virtual environment
 
-**Windows**
+Windows:
 
 ```bash
 python -m venv .venv
-.venv\\Scripts\\activate
+.venv\Scripts\activate
 ```
 
-**macOS/Linux**
+macOS/Linux:
 
 ```bash
 python3 -m venv .venv
@@ -47,40 +73,39 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Run the application
+PyTorch installation can be hardware-specific. If the standard `pip install` does not provide the appropriate build for your machine, install the matching PyTorch build first and then install the remaining requirements.
 
-From the repository root:
+### 3. Run the application
 
 ```bash
 python app.py
 ```
 
-Gradio will print a local URL in the terminal. Open it in your browser and upload a video.
+Open the local Gradio URL printed in the terminal and upload a video.
 
-## How it works
+## Output example
 
-1. Gradio receives the uploaded video.
-2. OpenCV opens the video file.
-3. Basic metadata such as FPS, resolution, frame count, and duration is read.
-4. A limited number of frames are sampled.
-5. Average grayscale brightness is calculated for the sampled frames.
-6. The UI reports the analysis and explicitly states that no deepfake prediction is being made.
+```text
+Verdict: LIKELY DEEPFAKE
+Fake probability: 87.4%
+Real probability: 12.6%
+Frames analyzed: 24
+```
 
-## Current limitation
+## Limitations
 
-This is a **video-analysis/UI prototype**, not a production deepfake detector.
+- The underlying model is a frame-level image classifier; it does not model temporal consistency between frames.
+- The model was trained on a particular dataset and may not generalize to every type of deepfake.
+- Video compression, lighting, face size, cropping, and unseen manipulation techniques can affect predictions.
+- The score is not independently calibrated by this repository.
+- A prediction should not be treated as definitive evidence of authenticity or manipulation.
+- The application currently analyzes full frames rather than performing dedicated face detection/cropping.
 
-A genuine detector would require a trained model and an evaluation pipeline, for example:
+For stronger research use, add a face-detection stage, temporal modeling, a held-out video-level evaluation set, threshold calibration, and reproducible metrics.
 
-- Face detection and face alignment
-- Frame sampling and preprocessing
-- CNN or Vision Transformer inference
-- Temporal modeling where appropriate
-- A labeled train/validation/test dataset
-- Precision, recall, F1-score, ROC-AUC, and confusion matrix
-- Model/version and dataset documentation
+## Evaluation
 
-Do not use the current demo's output as evidence that a video is authentic or manipulated.
+Do not copy the model card's reported accuracy into a claim about this application's accuracy. To make a repository-specific performance claim, evaluate the complete pipeline on a held-out video dataset and report accuracy, precision, recall, F1, ROC-AUC, and a confusion matrix.
 
 ## License
 
