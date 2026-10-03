@@ -1,61 +1,47 @@
-# Deepfake Video Detector
+# Deepfake Video Analysis Demo
 
-This project is a simple deepfake detection tool that allows users to upload a video and check for deepfake frames. It is built using OpenCV and Gradio to provide a web-based interface.
+A small OpenCV + Gradio prototype for experimenting with video-frame processing and result visualization.
+
+> **Important:** this repository currently contains a **mock detector**, not a trained deepfake-classification model. It marks demonstration frames as fake so the UI and video-processing pipeline can be tested safely.
 
 ## Features
-- Upload a video file for analysis
-- Mock deepfake detection (every second frame is marked as deepfake for demonstration purposes)
-- Displays the percentage of detected deepfake frames
-- Web-based UI powered by Gradio
+- Upload a video for frame-by-frame processing
+- OpenCV-based video decoding
+- Gradio web interface
+- Detection percentage visualization
+- Clear separation between demo logic and a future trained model
 
-## Requirements
-Make sure you have Python installed, then install the required dependencies:
+## Setup
 
 ```bash
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS/Linux
+source .venv/bin/activate
+
 pip install opencv-python gradio numpy
 ```
 
-## How to Run
-Clone this repository and navigate to the project folder:
-
-```bash
-git clone https://github.com/your-username/deepfake-detector.git
-cd deepfake-detector
-```
-
-Run the script:
-
-```bash
-python deepfake_detector.py
-```
-
-Once the script runs, it will generate a public Gradio link where you can upload videos for analysis.
-
-## How It Works
-1. The script loads the video using OpenCV.
-2. It processes each frame and (for demonstration) marks every second frame as a deepfake.
-3. The total number of frames and deepfake frames are counted.
-4. The result is displayed to the user.
-
-## Example Output
-If a video has 100 frames, the output might look like this:
-```
-Detected Deepfake Frames: 50 out of 100 (50.00%)
-```
+## How the prototype works
+1. Open the uploaded video with OpenCV.
+2. Iterate through frames.
+3. Apply the current demonstration detection rule.
+4. Aggregate frame-level results.
+5. Display the result through the web UI.
 
 ## Limitations
-🚨 **This is NOT a real deepfake detector!** 🚨
-- The detection logic is just a mock implementation.
-- A real deepfake detector would require a trained deep learning model.
+The current logic does **not** learn visual artifacts associated with deepfakes and should not be used as a real authenticity detector.
 
-## Future Improvements
-- Integrate a real deepfake detection model (e.g., using deep learning)
-- Improve frame analysis using facial recognition techniques
-- Deploy as a cloud-based service
+For a production-quality version, replace the mock rule with a trained model and report precision, recall, F1-score, ROC-AUC, and a confusion matrix on a held-out dataset.
 
-## Contributing
-Pull requests are welcome! Feel free to open issues for feature requests or bug reports.
+## Suggested next steps
+- Add a trained CNN/ViT-based frame classifier.
+- Add face detection/cropping before inference.
+- Sample frames adaptively instead of processing every frame.
+- Batch model inference for better throughput.
+- Add automated tests for video loading and inference.
+- Add reproducible dependency and model-download instructions.
 
 ## License
-This project is open-source under the MIT License.
-
+MIT.
