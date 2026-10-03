@@ -11,9 +11,9 @@ The detector no longer averages independent frame predictions. It now passes a *
 ## Features
 
 - Upload a video through Gradio
-- Uniformly sample 16 ordered frames across the video
-- Run temporal VideoMAE inference over the complete sequence
-- Produce real/fake probabilities directly from the video classifier
+- Split the video into up to 5 evenly distributed temporal clips
+- Run temporal VideoMAE inference over each 16-frame clip
+- Show per-clip real/fake probabilities, score variation, and an overall confidence summary
 - Display a video-level screening verdict
 - Report video metadata
 
@@ -45,7 +45,7 @@ Softmax probabilities
 Video-level verdict
 ```
 
-Unlike the previous frame-averaging implementation, there is no arithmetic average of 16 independent frame probabilities. The model receives the sequence as one video input and its classification head produces the video-level logits.
+There is no averaging of independent frame predictions. Each 16-frame sequence is passed to VideoMAE as one temporal input. The application then summarizes the separate clip-level predictions to describe how stable the model's decision is across the video.
 
 ## Project structure
 
@@ -94,11 +94,14 @@ Open the local Gradio URL and upload a video.
 
 ## Output
 
+For videos long enough to contain multiple clips, the application reports each clip separately. It then shows the mean fake probability, score range, standard deviation, and a confidence summary based on decision strength and cross-clip consistency.
+
+
 ```text
 Verdict: LIKELY DEEPFAKE
 Fake probability: 87.4%
 Real probability: 12.6%
-Temporal frames: 16
+Temporal clips: 5 × 16 frames
 ```
 
 The displayed probability is the model's softmax output for the video clip. It is not a calibrated probability that the entire source video is definitively manipulated.
