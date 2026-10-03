@@ -1,6 +1,7 @@
 """Gradio application for calibrated multi-clip temporal deepfake detection."""
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import cv2
@@ -70,7 +71,7 @@ def analyze_video(video_path: str | None) -> tuple[str, str]:
         for start, end in clips:
             frames, metadata = read_clip(str(path), start, end)
             real_score, fake_score = predict_clip(frames)
-            raw_logit = __import__("math").log(
+            raw_logit = math.log(
                 max(fake_score, 1e-7) / max(real_score, 1e-7)
             )
             raw_logits.append(raw_logit)
